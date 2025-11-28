@@ -6,7 +6,6 @@ import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs-extra";
 import { createBaileysConnection, logoutSession } from "./lib/connection.js";
-import { sessions } from "./lib/session.js";
 import { getAllSessions as dbGetAllSessions } from './lib/database/sessions.js';
 import { generatePairingCode } from "./lib/pairing.js";
 import config from "./config.js";
@@ -123,47 +122,33 @@ async function initializeSessions() {
 
 // ==================== ROUTES ====================
 
-app.get("/", (req, res) => {
-  const activeSessions = Array.from(sessions.keys());
-  res.json({
-    status: "online",
-    timestamp: new Date().toISOString(),
-    activeSessions: activeSessions.length,
-    sessions: activeSessions,
-  });
-});
-
-app.get("/status", (req, res) => {
-  const activeSessions = Array.from(sessions.entries()).map(([sessionId, data]) => ({
-    sessionId,
-    botNumber: data?.botNumber || "Unknown",
-  }));
-
-  res.json({
-    success: true,
-    activeSessions: activeSessions.length,
-    sessions: activeSessions,
-    timestamp: new Date().toISOString(),
-  });
-});
-
 /**
  * Pair new device endpoint
  */
 app.get("/pair", async (req, res) => {
   try {
     const { number } = req.query;
-
     if (!number) {
       return res.status(400).json({
         success: false,
         message: "Phone number is required (e.g., ?number=1234567890)",
       });
     }
+      // Check connection status efficiently
+  if (manager.isConnected(number)) {
+    return res.status(408).json({
+      status: "false",
+      message: "This number is already connected",
+    });
+  }
 
+  if (manager.isConnecting(number)) {
+    return res.status(409).json({
+      status: "error",
+      message: "This number is already in pairing process",
+    });
+  }
     const sessionId = number.replace(/[^0-9]/g, "");
-
-
     const pairingCode = await generatePairingCode(sessionId, number);
 
     res.json({
@@ -259,6 +244,24 @@ app.get("/reconnect", async (req, res) => {
       message: error.message,
     });
   }
+});
+
+app.get("/sessions", (req, res) => {
+  const sessions = {};
+  const allConnections = manager.getAllConnections();
+  allConnections.forEach(({ file_path, connection, healthy }) => {
+    sessions[file_path] = {
+      connected: healthy,
+      user: connection?.user?.name || "unknown",
+      jid: connection?.user?.id || null,
+      healthy: healthy,
+    };
+  });
+  res.json({
+    total: Object.keys(sessions).length,
+    healthy: allConnections.filter((c) => c.healthy).length,
+    sessions,
+  });
 });
 
 // ==================== STARTUP ====================
