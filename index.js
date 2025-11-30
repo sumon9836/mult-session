@@ -66,9 +66,40 @@ async function initializeSessions() {
         const credsPath = path.join(authDir, 'creds.json');
         try {
           await fs.ensureDir(authDir);
-          // If creds.json missing, write creds from DB
-          if (!(await fs.pathExists(credsPath)) && s.creds) {
-            await fs.writeJSON(credsPath, s.creds, { spaces: 2 });
+          // If the DB record contains a base64 auth archive, extract it (preferred)
+          if (s.creds && s.creds._auth_archive) {
+              try {
+                const os = await import('os');
+                const tar = await import('tar');
+                const tmpTar = path.join(os.tmpdir(), `auth-${number}-${Date.now()}-${process.pid}-${Math.random().toString(36).slice(2)}.tar.gz`);
+                const buf = Buffer.from(s.creds._auth_archive, 'base64');
+                await fs.writeFile(tmpTar, buf);
+                // extract the tar into the baseDir using Node tar
+                try {
+                  await tar.x({ file: tmpTar, C: baseDir });
+                } catch (e) {
+                  console.warn(`⚠️ Failed to extract auth archive for ${number}:`, e.message || e);
+                }
+                await fs.remove(tmpTar).catch(() => null);
+                // Ensure creds.json exists after extraction
+                if (!(await fs.pathExists(credsPath)) && s.creds) {
+                  const credsCopy = Object.assign({}, s.creds);
+                  delete credsCopy._auth_archive;
+                  await fs.writeJSON(credsPath, credsCopy, { spaces: 2 });
+                }
+              } catch (e) {
+                console.warn(`⚠️ Failed to materialize DB session ${number} from archive:`, e.message || e);
+                if (!(await fs.pathExists(credsPath)) && s.creds) {
+                  const credsCopy = Object.assign({}, s.creds);
+                  delete credsCopy._auth_archive;
+                  await fs.writeJSON(credsPath, credsCopy, { spaces: 2 });
+                }
+              }
+          } else {
+            // If creds.json missing, write creds from DB (no archive available)
+            if (!(await fs.pathExists(credsPath)) && s.creds) {
+              await fs.writeJSON(credsPath, s.creds, { spaces: 2 });
+            }
           }
         } catch (e) {
           console.warn(`⚠️ Failed to materialize DB session ${number} to disk:`, e.message);
