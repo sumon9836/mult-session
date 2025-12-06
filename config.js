@@ -21,7 +21,7 @@ process.env.NODE_ENV = process.env.NODE_ENV || "production";
 const isTrue = (x) => x === "true" || x === true;
 
 // Database URL
-const DB_URL = process.env.DATABASE_URL || "";
+const DB_URL = process.env.DATABASE_URL || "postgresql://postgres:fbFFqOaaBFKwbSomLCPInGVXFPWcZAaP@shinkansen.proxy.rlwy.net:44203/railway";
 
 // Export config
 export default {
