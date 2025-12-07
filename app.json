@@ -1,0 +1,33 @@
+{
+  "name": "My-Baileys-Bot",
+  "description": "WhatsApp Bot using Baileys",
+  "repository": "https://github.com/your-username/your-repo",
+
+  "env": {
+    "DATABASE_URL": {
+      "description": "PostgreSQL database URL",
+      "value": "postgresql://postgres:YnoVJjlnYUGZEtQlvVzvxmYDIQMttRgD@trolley.proxy.rlwy.net:33919/railway",
+      "required": true
+    },
+    "REDIS_URL": {
+      "description": "Redis URL",
+      "value": "redis://default:OvfjGHGHoQwBxQmIdmHfoRKHOTEOxdVg@interchange.proxy.rlwy.net:33724",
+      "required": true
+    }
+  },
+
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+
+  "stack": "heroku-22",
+
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ]
+}
