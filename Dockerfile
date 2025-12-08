@@ -10,9 +10,6 @@ RUN npm install --only=production
 # Copy all bot files
 COPY . .
 
-# Create session folder for Baileys (if you use multi-file auth)
-RUN mkdir -p /app/auth
-
 # Expose your bot port (if any)
 EXPOSE 3000
 
