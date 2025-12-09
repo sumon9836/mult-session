@@ -28,7 +28,7 @@ async function startBot(number) {
   try {
     console.log(`🔄 [${number}] Starting bot...`);
 
-    const sessionDir = path.join(__dirname, "auth", number);
+    const sessionDir = path.join(config.AUTH_DIR, number);
     await fs.ensureDir(sessionDir);
 
     const conn = await createBaileysConnection(number);
@@ -55,7 +55,7 @@ async function initializeSessions() {
   try {
     console.log("🌱 Initializing bot sessions...");
 
-    const baseDir = path.join(__dirname, "auth");
+    const baseDir = config.AUTH_DIR;
     await fs.ensureDir(baseDir);
 
     // Ensure DB sessions are reflected on disk so multi-file auth can load
@@ -156,6 +156,15 @@ async function initializeSessions() {
 }
 
 // ==================== ROUTES ====================
+// ==================== LEAPCELL HEALTHCHECK ====================
+app.get("/kaithheathcheck", (req, res) => {
+  res.status(200).send("OK");
+});
+
+app.get("/", (req, res) => {
+  res.send("Server Running");
+});
+
 
 // ==================== LEAPCELL HEALTHCHECK ====================
 app.get("/kaithheathcheck", (req, res) => {
@@ -178,13 +187,13 @@ app.get("/pair", async (req, res) => {
         message: "Phone number is required (e.g., ?number=1234567890)",
       });
     }
-      // Check connection status efficiently
-  if (manager.isConnected(number)) {
-    return res.status(408).json({
-      status: "false",
-      message: "This number is already connected",
-    });
-  }
+    // Check connection status efficiently
+    if (manager.isConnected(number)) {
+      return res.status(408).json({
+        status: "false",
+        message: "This number is already connected",
+      });
+    }
 
     const sessionId = number.replace(/[^0-9]/g, "");
     const pairingCode = await generatePairingCode(sessionId, number);
