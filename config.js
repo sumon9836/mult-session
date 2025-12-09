@@ -23,6 +23,10 @@ const isTrue = (x) => x === "true" || x === true;
 // Database URL
 const DB_URL = process.env.DATABASE_URL || "";
 
+// Auth directory - use writable location for hosting environments
+// Default to /tmp/auth (writable in most environments) or configurable via AUTH_DIR env var
+const AUTH_DIR = process.env.AUTH_DIR || path.join(process.cwd(), 'tmp', 'auth');
+
 // Export config
 export default {
   prefix: process.env.PREFIX || ".",
@@ -38,6 +42,7 @@ export default {
   MONGODB_URI: process.env.MONGODB_URI || "",
   WORK_TYPE: process.env.WORK_TYPE || "public",
   STATUS_REACT: isTrue(process.env.STATUS_REACT) || false,
+  AUTH_DIR,
   DATABASE: DB_URL
     ? new Sequelize(DB_URL, {
         dialect: "postgres",
