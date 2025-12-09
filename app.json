@@ -1,9 +1,16 @@
-{
-  "name": "My-Baileys-Bot",
-  "description": "WhatsApp Bot using Baileys",
-  "repository": "https://github.com/your-username/your-repo",
 
-  "env": {
+{
+    "name": "x-kira",
+    "version":"1.5.0",
+    "description": "x-kira Multi Device whatsapp bot",
+    "logo": "https://graph.org/file/58ea74675af7836579a3a.jpg",
+    "keywords": ["whatsapp"],
+    "repository": "https://github.com/sumon5984/multiple",
+    "website": "https://github.com/sumon9836",
+    "success_url": "/",
+    "stack": "container",
+    
+    "env": {
     "DATABASE_URL": {
       "description": "PostgreSQL database URL",
       "value": "postgresql://postgres:YnoVJjlnYUGZEtQlvVzvxmYDIQMttRgD@trolley.proxy.rlwy.net:33919/railway",
@@ -15,23 +22,10 @@
       "required": true
     }
   },
-
-  "formation": {
-    "worker": {
-      "quantity": 1,
-      "size": "basic"
-    }
-  },
-
-  "stack": "heroku-22",
-
-  "buildpacks": [
-    {
-      "url": "heroku/nodejs"
-    }
-  ],
-
-  "engines": {
-    "node": ">=22.x"
+  
+      "buildpacks": [
+                    { "url": "https://github.com/heroku/heroku-buildpack-nodejs#latest" },
+                    { "url": "https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git" }
+    ]
   }
-}
+  
