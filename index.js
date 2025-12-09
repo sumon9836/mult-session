@@ -165,16 +165,6 @@ app.get("/", (req, res) => {
   res.send("Server Running");
 });
 
-
-// ==================== LEAPCELL HEALTHCHECK ====================
-app.get("/kaithheathcheck", (req, res) => {
-  res.status(200).send("OK");
-});
-
-app.get("/", (req, res) => {
-  res.send("Server Running");
-});
-
 /**
  * Pair new device endpoint
  */
