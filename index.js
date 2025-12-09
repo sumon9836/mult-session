@@ -28,8 +28,12 @@ async function startBot(number) {
   try {
     console.log(`🔄 [${number}] Starting bot...`);
 
-    const sessionDir = path.join(config.AUTH_DIR, number);
-    await fs.ensureDir(sessionDir);
+    const baseDir = config.AUTH_DIR;
+    const sessionDir = path.join(baseDir, String(number));
+    
+    // Create directories recursively
+    await fs.promises.mkdir(baseDir, { recursive: true });
+    await fs.promises.mkdir(sessionDir, { recursive: true });
 
     const conn = await createBaileysConnection(number);
     if (!conn) {
@@ -56,7 +60,8 @@ async function initializeSessions() {
     console.log("🌱 Initializing bot sessions...");
 
     const baseDir = config.AUTH_DIR;
-    await fs.ensureDir(baseDir);
+    // Create base directory with recursive flag
+    await fs.promises.mkdir(baseDir, { recursive: true });
 
     // Ensure DB sessions are reflected on disk so multi-file auth can load
     try {
@@ -66,35 +71,51 @@ async function initializeSessions() {
         const authDir = path.join(baseDir, number);
         const credsPath = path.join(authDir, 'creds.json');
         try {
-          await fs.ensureDir(authDir);
+          // Create auth directory recursively
+          await fs.promises.mkdir(authDir, { recursive: true });
+          
           // If DB has selected-files payload, restore them atomically
           if (s?.creds && s.creds._selected_files) {
             try {
-              const authDir = path.join(baseDir, number);
               const res = await restoreSelectedFiles(number, authDir, async (num) => {
                 return await dbGetSession(num);
               });
               if (!res.ok) {
                 console.warn(`⚠️ [${number}] restoreSelectedFiles failed:`, res.reason);
                 // fallback: if no creds on disk, write plain creds.json
-                if (!(await fs.pathExists(credsPath)) && s.creds) {
-                  const credsCopy = Object.assign({}, s.creds);
-                  delete credsCopy._selected_files;
-                  await fs.writeJSON(credsPath, credsCopy, { spaces: 2 });
+                try {
+                  await fs.promises.access(credsPath);
+                } catch (e) {
+                  // File doesn't exist, write it
+                  if (s.creds) {
+                    const credsCopy = Object.assign({}, s.creds);
+                    delete credsCopy._selected_files;
+                    await fs.promises.writeFile(credsPath, JSON.stringify(credsCopy, null, 2));
+                  }
                 }
               }
             } catch (e) {
               console.warn(`⚠️ Failed to materialize DB session ${number} to disk:`, e.message || e);
-              if (!(await fs.pathExists(credsPath)) && s.creds) {
-                const credsCopy = Object.assign({}, s.creds);
-                delete credsCopy._selected_files;
-                await fs.writeJSON(credsPath, credsCopy, { spaces: 2 });
+              try {
+                await fs.promises.access(credsPath);
+              } catch (err) {
+                // File doesn't exist, write it
+                if (s.creds) {
+                  const credsCopy = Object.assign({}, s.creds);
+                  delete credsCopy._selected_files;
+                  await fs.promises.writeFile(credsPath, JSON.stringify(credsCopy, null, 2));
+                }
               }
             }
           } else {
             // legacy fallback: write creds.json if missing
-            if (!(await fs.pathExists(credsPath)) && s.creds) {
-              await fs.writeJSON(credsPath, s.creds, { spaces: 2 });
+            try {
+              await fs.promises.access(credsPath);
+            } catch (e) {
+              // File doesn't exist, write it
+              if (s.creds) {
+                await fs.promises.writeFile(credsPath, JSON.stringify(s.creds, null, 2));
+              }
             }
           }
         } catch (e) {
@@ -106,10 +127,24 @@ async function initializeSessions() {
     }
 
     // Get all session folders
-    const folders = await fs.readdir(baseDir);
-    const sessionNumbers = folders.filter((f) =>
-      fs.existsSync(path.join(baseDir, f, "creds.json"))
-    );
+    let folders = [];
+    try {
+      folders = await fs.promises.readdir(baseDir);
+    } catch (e) {
+      if (e.code !== 'ENOENT') throw e;
+      folders = [];
+    }
+    
+    const sessionNumbers = [];
+    for (const f of folders) {
+      const credsPath = path.join(baseDir, f, "creds.json");
+      try {
+        await fs.promises.access(credsPath);
+        sessionNumbers.push(f);
+      } catch (e) {
+        // creds.json doesn't exist for this folder
+      }
+    }
 
     if (!sessionNumbers.length) {
       console.log("⚠️ No existing sessions found. Use /pair endpoint to add new sessions.");
